@@ -47,15 +47,28 @@ var padList = {
   sorted : false,
   init: function()
   {
-    db.findKeys("pad:*", "*:*:*", function(err, dbData)
-    {
-      if(ERR(err)) return;
-      if(dbData != null){
-        dbData.forEach(function(val){
-          padList.addPad(val.replace(/pad:/,""),false);
-        });
-      }
-    });
+    if(db.findKeys) {
+      // use findKeys to get all pads only when dbms supports it
+      db.findKeys("pad:*", "*:*:*", function(err, dbData)
+      {
+        if(ERR(err)) return;
+        if(dbData != null){
+          dbData.forEach(function(val){
+            padList.addPad(val.replace(/pad:/,""),false);
+          });
+        }
+      });
+    } else if(db.listSetItems) {
+      // use a separate list of pads as fallback for dbms that do not support findKeys
+      db.listSetItems('pads', function(err, dbData) {
+          if(ERR(err)) return;
+          if(dbData != null){
+            dbData.forEach(function(val){
+              padList.addPad(val,false);
+            });
+          }
+      });
+    }
     return this;
   },
   /**
@@ -73,6 +86,9 @@ var padList = {
     if(this.list.indexOf(name) == -1){
       this.list.push(name);
       this.sorted=false;
+      if(db.addSetItem) {
+        db.addSetItem('pads', name);
+      }
     }
   },
   removePad: function(name)
@@ -81,6 +97,9 @@ var padList = {
     if(index>-1){
       this.list.splice(index,1);
       this.sorted=false;
+      if(db.removeSetItem) {
+        db.removeSetItem('pads', name);
+      }
     }
   }
 };
